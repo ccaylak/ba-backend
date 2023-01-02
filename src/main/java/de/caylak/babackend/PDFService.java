@@ -1,6 +1,5 @@
 package de.caylak.babackend;
 
-import de.caylak.babackend.service.OCRService.ActionType;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.rendering.PDFRenderer;
 import org.springframework.stereotype.Service;
@@ -14,29 +13,26 @@ import java.util.List;
 import static org.apache.pdfbox.pdmodel.PDDocument.load;
 
 @Service
-public class PDFConverter {
+public class PDFService {
 
-    private static final int DPI = 300;
+    public List<BufferedImage> convertToBufferedImages(File pdfFile, int dpi) throws IOException {
 
-    public List<BufferedImage> convertPDFToImages(File pdfFile, ActionType actionType) throws IOException {
         List<BufferedImage> bufferedImages = new ArrayList<>();
 
-        if (pdfFile.exists() && actionType != null) {
+        if (pdfFile.exists()) {
             try (PDDocument pdfDocument = load(pdfFile)) {
                 PDFRenderer pdfRenderer = new PDFRenderer(pdfDocument);
 
-                int numberOfPages = pdfDocument.getNumberOfPages();
+                int pages = pdfDocument.getNumberOfPages();
 
-                for (int i = 0; i < numberOfPages; ++i) {
-                    bufferedImages.add(pdfRenderer.renderImageWithDPI(i, DPI));
+                for (int i = 0; i < pages; ++i) {
+                    bufferedImages.add(pdfRenderer.renderImageWithDPI(i, dpi));
                 }
             }
+        } else {
+            throw new IllegalStateException("PDF does not exist");
         }
-        return bufferedImages;
-    }
 
-    private BufferedImage extractCourseAndUniversity(BufferedImage image) {
-        //für 300dpi
-        return image.getSubimage(200, 1395, 2185, 153);
+        return bufferedImages;
     }
 }

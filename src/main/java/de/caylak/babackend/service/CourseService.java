@@ -2,20 +2,17 @@ package de.caylak.babackend.service;
 
 import de.caylak.babackend.dto.CourseDTO;
 import de.caylak.babackend.dto.ModuleDTO;
+import de.caylak.babackend.utility.OCRUtils;
 import lombok.RequiredArgsConstructor;
 import net.sourceforge.tess4j.Tesseract;
 import net.sourceforge.tess4j.TesseractException;
-import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.stereotype.Service;
 
+import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
-import java.io.IOException;
-import java.text.NumberFormat;
-import java.text.ParseException;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import java.util.Locale;
+import java.util.regex.Matcher;
 
 @Service
 @RequiredArgsConstructor
@@ -23,10 +20,9 @@ public class CourseService {
 
     private final Tesseract tesseract;
 
-    public CourseDTO createDTOAndImages(List<BufferedImage> pdfImages) throws TesseractException, IOException, ParseException {
+    public CourseDTO createDTOAndImages(List<BufferedImage> pdfImages) throws TesseractException {
         pdfImages = pdfImages.subList(1, 3);
 
-        //Bilder noch zurückgeben
         return CourseDTO.builder()
                 .name(extractCourseName(pdfImages.get(0)))
                 .regularModules(extractRegularModules(pdfImages.get(0)))
@@ -34,84 +30,52 @@ public class CourseService {
                 .build();
     }
 
-    public String extractCourseName(BufferedImage bufferedImage) throws TesseractException {
-        BufferedImage courseNameImage = bufferedImage.getSubimage(146, 168, 1900, 90);
+    public String extractCourseName(BufferedImage pdfImage) throws TesseractException {
+        BufferedImage courseNameImage = pdfImage.getSubimage(146, 168, 1900, 90);
 
-        return tesseract.doOCR(courseNameImage).replace("Prüfungsleistung im eingeschriebenen Studiengang ", "");
+        tesseract.setPageSegMode(7);
+        return tesseract.doOCR(courseNameImage)
+                .replace("Prüfungsleistung im eingeschriebenen Studiengang ", "")
+                .trim();
     }
 
-    public List<ModuleDTO> extractRegularModules(BufferedImage bufferedImage) throws TesseractException, IOException, ParseException {
+    public Pair<BufferedImage, List<ModuleDTO>> extractRegularModules(BufferedImage pdfImage) throws TesseractException {
 
-        BufferedImage moduleIdsImage = bufferedImage.getSubimage(286, 415, 200, 2345);
-        BufferedImage moduleNamesImage = bufferedImage.getSubimage(481, 415, 784, 2345);
-        BufferedImage moduleEctsImage = bufferedImage.getSubimage(1280, 415, 141, 2345);
+        BufferedImage regularModulesImage = pdfImage.getSubimage(290, 410, 1110, 2330);
 
-        List<String> moduleIds = getValuesWithoutNewLinesAndEmptyValues(tesseract.doOCR(moduleIdsImage));
-        List<String> moduleNames = getValuesWithoutNewLinesAndEmptyValues(tesseract.doOCR(moduleNamesImage));
-        List<String> moduleEcts = getValuesWithoutNewLinesAndEmptyValues(tesseract.doOCR(moduleEctsImage));
+        tesseract.setPageSegMode(6);
+        List<String> ocrResult = OCRUtils.extractValues(tesseract.doOCR(regularModulesImage));
 
-        NumberFormat format = NumberFormat.getInstance(Locale.GERMANY);
-
-        List<ModuleDTO> regularModules = new ArrayList<>();
-        for (int i = 0; i < moduleIds.size(); i++) {
-
-            Number number = format.parse(moduleEcts.get(i));
-
-            regularModules.add(
-                    ModuleDTO.builder()
-                            .id(Integer.parseInt(moduleIds.get(i)))
-                            .name(moduleNames.get(i))
-                            .ects(number.floatValue())
-                            .build()
-            );
-        }
-
-        return regularModules;
-    }
-
-    private List<String> getValuesWithoutNewLinesAndEmptyValues(String ocrResult) {
-
-        return Arrays.stream(ocrResult.split(System.lineSeparator()))
-                .filter(StringUtils::isNotBlank)
+        List<ModuleDTO> regularModuleDTOs = ocrResult.stream()
+                .map(OCRUtils.modulePattern()::matcher)
+                .filter(Matcher::find)
+                .map(ModuleDTO::createModule)
                 .toList();
+
+        return Pair.of(regularModulesImage, regularModuleDTOs);
     }
 
-    public List<ModuleDTO> extractElectiveModules(List<BufferedImage> bufferedImages) throws TesseractException, ParseException {
-        BufferedImage firstImage = bufferedImages.get(0);
-        BufferedImage firstModuleIdsImage = firstImage.getSubimage(286, 2822, 150, 510);
-        BufferedImage firstModuleNamesImage = firstImage.getSubimage(481, 2822, 784, 510);
-        BufferedImage firstModuleEctsImage = firstImage.getSubimage(1280, 2822, 141, 510);
+    public Pair<List<BufferedImage>, List<ModuleDTO>> extractElectiveModules(List<BufferedImage> bufferedImages) throws TesseractException {
 
-        BufferedImage lastImage = bufferedImages.get(1);
-        BufferedImage lastModuleIdsImage = lastImage.getSubimage(300, 185, 150, 1755);
-        BufferedImage lastModuleNamesImage = lastImage.getSubimage(465, 185, 784, 1755);
-        BufferedImage lastModuleEctsImage = lastImage.getSubimage(1275, 185, 100, 1755);
+        BufferedImage firstPageImage = bufferedImages.get(0).getSubimage(285, 2800, 1115, 550);
+        BufferedImage secondPageImage = bufferedImages.get(1).getSubimage(285, 200, 1115, 1750);
 
-        List<String> moduleIds = new ArrayList<>(getValuesWithoutNewLinesAndEmptyValues(tesseract.doOCR(firstModuleIdsImage)));
-        List<String> moduleNames = new ArrayList<>(getValuesWithoutNewLinesAndEmptyValues(tesseract.doOCR(firstModuleNamesImage)));
-        List<String> moduleEcts = new ArrayList<>(getValuesWithoutNewLinesAndEmptyValues(tesseract.doOCR(firstModuleEctsImage)));
+        BufferedImage blankImage = new BufferedImage(1115, 550 + 1750, BufferedImage.TYPE_INT_RGB);
 
-        moduleIds.addAll(getValuesWithoutNewLinesAndEmptyValues(tesseract.doOCR(lastModuleIdsImage)));
-        moduleNames.addAll(getValuesWithoutNewLinesAndEmptyValues(tesseract.doOCR(lastModuleNamesImage)));
-        moduleEcts.addAll(getValuesWithoutNewLinesAndEmptyValues(tesseract.doOCR(lastModuleEctsImage)));
+        Graphics2D graphics = blankImage.createGraphics();
+        graphics.drawImage(firstPageImage, 0, 0, null);
+        graphics.drawImage(secondPageImage, 0, 550, null);
+        graphics.dispose();
 
-        NumberFormat format = NumberFormat.getInstance(Locale.GERMANY);
+        tesseract.setPageSegMode(6);
+        List<String> ocrResult = OCRUtils.extractValues(tesseract.doOCR(blankImage));
 
-        List<ModuleDTO> electiveModules = new ArrayList<>();
-        for (int i = 0; i < moduleIds.size(); i++) {
+        List<ModuleDTO> electiveModuleDTOs = ocrResult.stream()
+                .map(OCRUtils.modulePattern()::matcher)
+                .filter(Matcher::find)
+                .map(ModuleDTO::createModule)
+                .toList();
 
-            Number number = format.parse(moduleEcts.get(i));
-
-            electiveModules.add(
-                    ModuleDTO.builder()
-                            .id(Integer.parseInt(moduleIds.get(i)))
-                            .name(moduleNames.get(i))
-                            .ects(number.floatValue())
-                            .build()
-            );
-        }
-
-        return electiveModules;
+        return Pair.of(List.of(firstPageImage, secondPageImage), electiveModuleDTOs);
     }
-
 }
