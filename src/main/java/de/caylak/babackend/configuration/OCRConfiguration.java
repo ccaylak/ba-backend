@@ -22,7 +22,7 @@ public class OCRConfiguration {
         tesseract.setLanguage(LANGUAGE);
         tesseract.setOcrEngineMode(1);
 
-        Path dataPath = Paths.get(ClassLoader.getSystemResource("data").toURI());
+        Path dataPath = Paths.get(ClassLoader.getSystemResource("data/").toURI());
         tesseract.setDatapath(dataPath.toString());
 
         return tesseract;

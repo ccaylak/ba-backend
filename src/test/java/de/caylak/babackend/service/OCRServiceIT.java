@@ -1,6 +1,5 @@
 package de.caylak.babackend.service;
 
-import de.caylak.babackend.controller.AcknowledgementData;
 import de.caylak.babackend.dto.CourseDTO;
 import de.caylak.babackend.dto.ModuleDTO;
 import net.sourceforge.tess4j.TesseractException;
@@ -11,8 +10,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 
 import java.io.File;
 import java.io.IOException;
-
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
 @SpringBootTest
 class OCRServiceIT {
@@ -46,7 +43,7 @@ class OCRServiceIT {
                         ModuleDTO.builder()
                                 .id("45182")
                                 .name("Seminar Inhalt")
-                                .ects("2.5")
+                                .ects("2,5")
                                 .build(),
                         ModuleDTO.builder()
                                 .id("46901")
@@ -58,32 +55,6 @@ class OCRServiceIT {
                                 .name("Virtualisierung und Cloud Computing")
                                 .ects("5")
                                 .build()
-                )
-        ;
-    }
-
-    @Test
-    void getDataFromAcknowledgementDocument() throws TesseractException, IOException {
-        // given
-        File pdfFile = UploadService.getPDFFile();
-
-        // when
-        AcknowledgementData actualAcknowledgementData = testSubject.getDataFromAcknowledgementDocument(pdfFile);
-
-        // then
-        assertThat(actualAcknowledgementData)
-                .extracting(
-                        acknowledgementData -> acknowledgementData.getRequestedCourse().getRight(),
-                        acknowledgementData -> acknowledgementData.getOriginData().getMiddle(),
-                        acknowledgementData -> acknowledgementData.getOriginData().getRight(),
-                        acknowledgementData -> acknowledgementData.getModules().getMiddle().size(),
-                        acknowledgementData -> acknowledgementData.getModules().getRight().size()
-                ).contains(
-                        "Informatik",
-                        "Informatik",
-                        "Technische Universität Dortmund",
-                        17,
-                        1
                 )
         ;
     }

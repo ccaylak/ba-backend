@@ -1,7 +1,7 @@
 package de.caylak.babackend.service;
 
 import de.caylak.babackend.PDFService;
-import de.caylak.babackend.controller.AcknowledgementData;
+import de.caylak.babackend.dto.AcknowledgementData;
 import de.caylak.babackend.dto.CourseDTO;
 import lombok.RequiredArgsConstructor;
 import net.sourceforge.tess4j.TesseractException;

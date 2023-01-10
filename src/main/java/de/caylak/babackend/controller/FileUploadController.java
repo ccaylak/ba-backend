@@ -2,6 +2,7 @@ package de.caylak.babackend.controller;
 
 import de.caylak.babackend.service.FileStorageService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -14,6 +15,7 @@ import java.io.IOException;
 
 @RestController
 @RequiredArgsConstructor
+@CrossOrigin(origins = "http://localhost:3000")
 public class FileUploadController {
 
     private final FileStorageService fileStorageService;

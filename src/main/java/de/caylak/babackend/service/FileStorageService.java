@@ -53,14 +53,14 @@ public class FileStorageService {
     }
 
     public File serveFile(String fileName) throws IOException {
-        return findByFileName(this.fileStorageLocation, fileName).toFile();
+        return findByFileName(fileName).toFile();
     }
 
-    public static Path findByFileName(Path path, String fileName)
+    public Path findByFileName(String fileName)
             throws IOException {
 
         List<Path> result;
-        try (Stream<Path> pathStream = Files.find(path,
+        try (Stream<Path> pathStream = Files.find(this.fileStorageLocation,
                 Integer.MAX_VALUE,
                 (p, basicFileAttributes) ->
                         p.getFileName().toString().equalsIgnoreCase(fileName))
