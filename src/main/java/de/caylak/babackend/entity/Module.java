@@ -1,7 +1,9 @@
 package de.caylak.babackend.entity;
 
-import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
@@ -9,7 +11,6 @@ import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.JoinTable;
 import javax.persistence.ManyToMany;
-import javax.persistence.ManyToOne;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -20,7 +21,9 @@ import static javax.persistence.CascadeType.REFRESH;
 
 @Entity
 @NoArgsConstructor
-@Data
+@Getter
+@Setter
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class Module {
 
     @Id
@@ -28,15 +31,25 @@ public class Module {
     private long id;
 
     private String moduleNumber;
-    private String name;
-    private String ects;
 
+    @EqualsAndHashCode.Include
+    private String name;
+    @EqualsAndHashCode.Include
+    private String ects;
+    @EqualsAndHashCode.Include
     private String grade;
+
     private String ackGrade;
 
-    @ManyToOne(cascade = {DETACH, MERGE, PERSIST, REFRESH})
-    @JoinColumn(name = "university_id")
-    private University university;
+    @ManyToMany(cascade = {DETACH, MERGE, PERSIST, REFRESH})
+    @JoinTable(
+            joinColumns = @JoinColumn(name = "module_id"),
+            inverseJoinColumns = {
+                    @JoinColumn(name = "course_name"),
+                    @JoinColumn(name = "university_id")
+            }
+    )
+    private List<Course> courses = new ArrayList<>();
 
     @ManyToMany(cascade = {DETACH, MERGE, PERSIST, REFRESH})
     @JoinTable(
@@ -45,18 +58,26 @@ public class Module {
     )
     private List<Module> equivalentModules = new ArrayList<>();
 
-    public Module(String moduleNumber, String name, String ects, University university) {
-        this.moduleNumber = moduleNumber;
-        this.name = name;
-        this.ects = ects;
-        this.university = university;
-    }
+    @ManyToMany(cascade = {DETACH, MERGE, PERSIST, REFRESH})
+    @JoinTable(
+            joinColumns = @JoinColumn(name = "module_id"),
+            inverseJoinColumns = @JoinColumn(name = "non_equivalent_module_id")
+    )
+    private List<Module> nonEquivalentModules = new ArrayList<>();
 
-    public Module(String name, String ects, String grade, String ackGrade, University university) {
+    @ManyToMany(cascade = {DETACH, MERGE, PERSIST, REFRESH})
+    @JoinTable(
+            joinColumns = @JoinColumn(name = "module_id"),
+            inverseJoinColumns = @JoinColumn(name = "unknown_equivalent_module_id")
+    )
+    private List<Module> unknownEquivalentModules = new ArrayList<>();
+
+    public Module(String moduleNumber, String name, String ects, String grade, String ackGrade, Course course) {
+        this.moduleNumber = moduleNumber;
         this.name = name;
         this.ects = ects;
         this.grade = grade;
         this.ackGrade = ackGrade;
-        this.university = university;
+        courses.add(course);
     }
 }

@@ -12,6 +12,8 @@ import org.springframework.stereotype.Service;
 
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
+import java.io.IOException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -25,8 +27,9 @@ import static java.util.stream.Collectors.toMap;
 public class AcknowledgementService {
 
     private final Tesseract tesseract;
+    private Path imageLocation;
 
-    public AcknowledgementData createAcknowledgementDataAndImages(List<BufferedImage> pdfImages) throws TesseractException {
+    public AcknowledgementData createAcknowledgementDataAndImages(List<BufferedImage> pdfImages) throws TesseractException, IOException {
         pdfImages = pdfImages.subList(0, 3);
         return AcknowledgementData.builder()
                 .requestData(extractRequestedData(pdfImages.get(0)))
@@ -39,11 +42,10 @@ public class AcknowledgementService {
     private synchronized RequestData extractRequestedData(BufferedImage pdfImage) throws TesseractException {
 
         BufferedImage requestedCourseNameImage = pdfImage.getSubimage(1010, 208, 1000, 100);
-
         tesseract.setPageSegMode(7);
         String requestedCourse = tesseract.doOCR(requestedCourseNameImage).replace("Prüfungsausschuss", "");
-        BufferedImage originDataImage = pdfImage.getSubimage(175, 1405, 2195, 133);
 
+        BufferedImage originDataImage = pdfImage.getSubimage(175, 1405, 2195, 133);
         tesseract.setPageSegMode(6);
         List<String> ocrResults = OCRUtils.extractValues(tesseract.doOCR(originDataImage));
         String originCourse = ocrResults.get(0).replace("Studiengang: ", "");
@@ -56,7 +58,7 @@ public class AcknowledgementService {
                 .build();
     }
 
-    private List<ModulePairDTO> extractModules(List<BufferedImage> pdfImages) throws TesseractException {
+    private List<ModulePairDTO> extractModules(List<BufferedImage> pdfImages) throws TesseractException, IOException {
 
         if (pdfImages.size() == 1) {
             BufferedImage regularModulesImage = pdfImages.get(0).getSubimage(290, 421, 1110 + 901, 2340);

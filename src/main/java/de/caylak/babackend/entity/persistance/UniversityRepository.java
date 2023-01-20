@@ -7,6 +7,6 @@ import org.springframework.stereotype.Repository;
 import java.util.Optional;
 
 @Repository
-public interface UniversityRepository extends JpaRepository<University, Integer> {
+public interface UniversityRepository extends JpaRepository<University, String> {
     Optional<University> findByName(String name);
 }
